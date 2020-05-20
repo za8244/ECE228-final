@@ -18,7 +18,12 @@ class INAT(data.Dataset):
         self.imageNames = []
         self.imageClasses = []
         for i in range(4030, 4264):
-            self.imageNames += os.listdir(root+"/"+str(i))
+            if is_train:
+                imageNames = os.listdir(root+"/"+str(i))
+                imageNames = imageNames[:len(imageNames)*0.8]
+            else:
+                imageNames = imageNames[len(imageNames)*0.8:]
+            self.imageNames += 
             self.imageClasses.append(i)
 
         print("nImage", len(self.imageNames))
@@ -47,7 +52,6 @@ class INAT(data.Dataset):
 
     def __getitem__(self, index):
         path = self.root + "/" + str(self.imageClasses[0]) + "/" + self.imageNames[index]
-        print("path", path)
         img = self.loader(path)
 
         if self.is_train:
@@ -62,10 +66,8 @@ class INAT(data.Dataset):
 
         return img, self.imageClasses[index]
 
-    # def __len__(self):
-    #     return len(self.imgs)
+    def __len__(self):
+        return len(self.imageNames)
 
-print("??s?")
 loader = INAT("Mammalia", 1) 
 print(loader.__getitem__(1))
-print("???")
