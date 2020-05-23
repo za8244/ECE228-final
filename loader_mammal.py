@@ -5,7 +5,7 @@ import json
 from torchvision import transforms
 import random
 import numpy as np
-
+import code
 
 def default_loader(path):
     return Image.open(path).convert('RGB')
@@ -18,15 +18,26 @@ class INAT(data.Dataset):
         self.imageNames = []
         self.imageClasses = []
         for i in range(4030, 4264):
-            if is_train:
-                imageNames = os.listdir(root+"/"+str(i))
-                imageNames = imageNames[:len(imageNames)*0.8]
-            else:
-                imageNames = imageNames[len(imageNames)*0.8:]
-            self.imageNames += 
+            imageNames = os.listdir(root+ "/" + str(i))
+            print(imageNames)
+            for imageName in imageNames:
+                path = root+ "/" + str(i) + "/" + imageName
+                self.imageNames.append(path)
+                print("path", path)
             self.imageClasses.append(i)
+        
+        nImage = len(self.imageNames)
+        print(self.imageNames)
+        print(nImage)
+        # code.interact(local=locals())
+        if is_train:
+            self.imageNames = self.imageNames[:int(nImage*0.8)]
+            self.imageClasses = self.imageClasses[:int(nImage*0.8)]
+        else:
+            self.imageNames = self.imageNames[nImage*0.8:]
+            self.imageClasses = self.imageClasses[nImage*0.8:]
 
-        print("nImage", len(self.imageNames))
+        print("nImage", nImage)
         print("nClass", 4264-4030+1)
 
         self.root = root
@@ -51,7 +62,7 @@ class INAT(data.Dataset):
         self.norm_aug = transforms.Normalize(mean=self.mu_data, std=self.std_data)
 
     def __getitem__(self, index):
-        path = self.root + "/" + str(self.imageClasses[0]) + "/" + self.imageNames[index]
+        path = self.imageNames[index]
         img = self.loader(path)
 
         if self.is_train:
@@ -71,3 +82,6 @@ class INAT(data.Dataset):
 
 loader = INAT("Mammalia", 1) 
 print(loader.__getitem__(1))
+print(loader.__getitem__(3))
+print(loader.__getitem__(4))
+print(loader.__getitem__(9))
