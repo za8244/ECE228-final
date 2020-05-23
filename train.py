@@ -12,11 +12,11 @@ import torch.optim
 import torch.utils.data
 from inception import *
 
-import inat2018_loader
+import loader_mammal
 
 class Params:
-    num_classes = 8142 #change here
-    epochs = 1 # 70 epochs
+    num_classes = 235 #change here
+    epochs = 50 # 70 epochs
     start_epoch = 0
     batch_size = 16
     lr = 0.0045
@@ -27,9 +27,9 @@ class Params:
     print_freq = 100
     resume = ''  # set this to path of model to resume training
     #resume = '/home/macaodha/Projects/inat2018/code/model_best.pth.tar'
-    train_file = '/media/derek/65fcdb8d-2222-4ffc-93e2-9dcb525bcf8d/data/train2018.json' #set data path here
-    val_file = '/media/derek/65fcdb8d-2222-4ffc-93e2-9dcb525bcf8d/data/val2018.json'
-    data_root = '/media/derek/65fcdb8d-2222-4ffc-93e2-9dcb525bcf8d/images/'
+    #train_file = '/media/derek/65fcdb8d-2222-4ffc-93e2-9dcb525bcf8d/data/train2018.json' #set data path here
+    #val_file = '/media/derek/65fcdb8d-2222-4ffc-93e2-9dcb525bcf8d/data/val2018.json'
+    data_root = '/media/derek/65fcdb8d-2222-4ffc-93e2-9dcb525bcf8d/images_mammal/Mammalia'
     # set evaluate to True to run the test set
     evaluate = False
     best_prec3 = 0.0  # store current best top 3
@@ -37,18 +37,14 @@ class Params:
 
 def main():
     global args, best_prec3
+    best_prec3 = 0.0
     args = Params()
     #===============data====================================
-    train_dataset = inat2018_loader.INAT(args.data_root, args.train_file,
-                     is_train=True)
-    val_dataset = inat2018_loader.INAT(args.data_root, args.val_file,
-                     is_train=False)
+    train_dataset = loader_mammal.INAT(args.data_root, is_train=True)
+    val_dataset = loader_mammal.INAT(args.data_root, is_train=False)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
-                   shuffle=True, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(val_dataset,
-                  batch_size=args.batch_size, shuffle=False,
-                  pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True) #pin_memory?
+    val_loader   = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,  pin_memory=True)
     #===============model====================================
     print("Using pre-trained inception_v3")
     model = inception_v3(pretrained=True)
@@ -93,6 +89,7 @@ def main():
         # remember best prec@1 and save checkpoint
         is_best = prec3 > best_prec3
         best_prec3 = max(prec3, best_prec3)
+        
         save_checkpoint({
             'epoch': epoch + 1,
             #'arch': args.arch,
@@ -114,14 +111,16 @@ def train(train_loader, model, criterion, optimizer, epoch):
     end = time.time()
     print('Epoch:{0}'.format(epoch))
     print('Itr\t\tTime\t\tLoss\t\tPrec@1\t\tPrec@3')
-    for i, (input, im_id, target, tax_ids) in enumerate(train_loader):
-        input = input.cuda()
-        target = target.cuda(async=True)
+    for i, rawData in enumerate(train_loader):
+        input = rawData[0].cuda()
+        #target = target.cuda(async=True)
+        target = rawData[1].cuda()
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
         # compute output
         output = model(input_var)
+        #print("output shape: ",output.shape) # (batchsize, nClasses)
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
@@ -163,19 +162,19 @@ def validate(val_loader, model, criterion):
     im_ids = []
 
     print('Validate:\tTime\t\tLoss\t\tPrec@1\t\tPrec@3')
-    for i, (input, im_id, target, tax_ids) in enumerate(val_loader):
+    for i, rawData in enumerate(val_loader):
 
-        input = input.cuda()
-        target = target.cuda(async=True)
-        input_var = torch.autograd.Variable(input, volatile=True)
-        target_var = torch.autograd.Variable(target, volatile=True)
+        input = rawData[0].cuda()
+        target = rawData[1].cuda()
+        input_var = torch.autograd.Variable(input)
+        target_var = torch.autograd.Variable(target)
 
         # compute output
         output = model(input_var)
         loss = criterion(output, target_var)
 
         prec1, prec3 = accuracy(output.data, target, topk=(1, 3))
-        losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data.cpu(), input.size(0)) #modify here
         top1.update(prec1[0], input.size(0))
         top3.update(prec3[0], input.size(0))
         batch_time.update(time.time() - end)

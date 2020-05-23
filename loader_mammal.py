@@ -12,33 +12,39 @@ def default_loader(path):
 
 class INAT(data.Dataset):
     def __init__(self, root, is_train=True):
-
-        nClass = 234
+        np.random.seed(20)
+        nClass = 4264-4030+1
         nImage = 0
         self.imageNames = []
         self.imageClasses = []
         for i in range(4030, 4264):
             imageNames = os.listdir(root+ "/" + str(i))
-            print(imageNames)
+            #print(imageNames)
             for imageName in imageNames:
                 path = root+ "/" + str(i) + "/" + imageName
                 self.imageNames.append(path)
-                print("path", path)
-            self.imageClasses.append(i)
+                #print("path", path)
+                self.imageClasses.append(i-4030) #shift to 0-nClass-1
         
+        self.imageNames   = np.array(self.imageNames)
+        self.imageClasses = np.array(self.imageClasses)
         nImage = len(self.imageNames)
-        print(self.imageNames)
-        print(nImage)
         # code.interact(local=locals())
+        idx_all = np.random.permutation(nImage).tolist()
+        idx_train = idx_all[:int(nImage*0.8)]
+        idx_valid = idx_all[int(nImage*0.8):]
+        print(len(idx_train))
         if is_train:
-            self.imageNames = self.imageNames[:int(nImage*0.8)]
-            self.imageClasses = self.imageClasses[:int(nImage*0.8)]
+            self.imageNames = self.imageNames[idx_train] #16644
+            self.imageClasses = self.imageClasses[idx_train]
         else:
-            self.imageNames = self.imageNames[nImage*0.8:]
-            self.imageClasses = self.imageClasses[nImage*0.8:]
-
-        print("nImage", nImage)
-        print("nClass", 4264-4030+1)
+            self.imageNames = self.imageNames[idx_valid]
+            self.imageClasses = self.imageClasses[idx_valid]
+ 
+        print("nImage", nImage) #20806
+        print("is training: ", is_train)
+        print("number of training/validation images: ", len(self.imageNames))
+        print("nClass", nClass) #235
 
         self.root = root
         self.is_train = is_train
@@ -74,14 +80,15 @@ class INAT(data.Dataset):
 
         img = self.tensor_aug(img)
         img = self.norm_aug(img)
-
+        #print("length of imageClasses: ", len(self.imageClasses))
+        #print(index)
         return img, self.imageClasses[index]
 
     def __len__(self):
         return len(self.imageNames)
 
-loader = INAT("Mammalia", 1) 
-print(loader.__getitem__(1))
-print(loader.__getitem__(3))
-print(loader.__getitem__(4))
-print(loader.__getitem__(9))
+#loader = INAT("Mammalia", 1) 
+#print(loader.__getitem__(1))
+#print(loader.__getitem__(3))
+#print(loader.__getitem__(4))
+#print(loader.__getitem__(9))
